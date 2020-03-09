@@ -6,9 +6,19 @@ const blueGhost = document.querySelector('img[src="assets/img/blueghost.png"]')
 const map = document.querySelector('.map')
 const submit = document.querySelector('button[type=submit]')
 const inputName = document.querySelector('input[type=text]')
-const divScore = document.querySelector('.score')
-const divTimer = document.querySelector('.timer')
+const divScore = document.querySelector('#score')
+const divTimer = document.querySelector('#timer')
+const divNiveau = document.querySelector('#niveau')
 //const submit = document.querySelector('#button_submit')
+const endButton = document.querySelector('#end-button')
+
+//Constante blocs de HTML
+const homePage = document.querySelector('.centered-block')
+const gamePage = document.querySelector('.game-block')
+const scorePage = document.querySelector('.tableScore')
+const endGameBlock = document.querySelector('.endGame')
+
+
 
 let pacManInterval
 let redGhostInterval
@@ -21,8 +31,7 @@ let blueGhostPosition
 let orangeGhostPosition
 
 let movePacManInterval = 150
-let moveGhostInterval = 150
-
+let moveGhostInterval = 400
 
 let currentRedGhostDirection
 let currentOrangeGhostDirection
@@ -34,9 +43,47 @@ let time = 0
 let userName
 
 let gameOver
-let gameLevel
+let gameLevel = 1
 
 const directions = [ 'toLeft', 'toRight', 'toTop', 'toBottom' ]
+
+//Responsive
+
+const maxSize = 1000
+const mqlMaxWidth = matchMedia(`(max-width: ${maxSize}px)`)
+const mqlMaxHeight = matchMedia(`(max-height: ${maxSize}px)`)
+const mqlOrientation = matchMedia('(orientation: portrait)')
+
+const sizeUnit = () => {
+    let sizeUnit = 'px'
+    if (isSmallScreen()) {
+        sizeUnit = isPortraitOrientation() ? 'vw' : 'vh'
+    }
+    return sizeUnit
+}
+const isSmallScreen = () => {
+    const mql = isPortraitOrientation() ? mqlMaxWidth : mqlMaxHeight
+    return mql.matches
+}
+const isPortraitOrientation = () => {
+    const mql = mqlOrientation
+    return mql.matches
+}
+const pxToViewportSize = (px) => {
+    return 100 * px / maxSize
+}
+const rearrange = element => {
+    element.style.top = isSmallScreen() ? pxToViewportSize(element.dataset.top) + sizeUnit() : element.dataset.top + sizeUnit()
+    element.style.left = isSmallScreen() ? pxToViewportSize(element.dataset.left) + sizeUnit() : element.dataset.left + sizeUnit()
+}
+const rearrangeElements = () => {
+    elements = document.querySelectorAll('[data-top][data-left]')
+    elements.forEach(element => rearrange(element))
+}
+
+mqlMaxWidth.addListener(e => rearrangeElements())
+mqlMaxHeight.addListener(e => rearrangeElements())
+mqlOrientation.addListener(e => rearrangeElements())
 
 // Collection des murs axe horizontal droite-gauche
 const blockedSquaresToLeft = [
@@ -110,8 +157,8 @@ const dotsToInsert = [
 ]
 //Récupérer l'emplacement d'un élément
 const getPositionOf = (element) => {
-    const top = parseInt(window.getComputedStyle(element, null).getPropertyValue('top'), 10)
-    const left = parseInt(window.getComputedStyle(element, null).getPropertyValue('left'), 10)
+    const top = parseInt(element.dataset.top, 10)
+    const left = parseInt(element.dataset.left, 10)
     return {top, left}
 }
 
@@ -138,44 +185,9 @@ const movePacMan = (to) => {
     pacManInterval = setInterval(() => {
         // Évaluer la direction et déplacer Pac-Man en conséquences s'il ne rencontre pas de mur
         if (!isTheCharacterBlocked(pacManPosition, to)) {
-            switch (to) {
-
-                case 'toLeft':
-                    // Si Pac-Man est au bord gauche situé à 0px
-                    // nous le ramenons au bord droit situé à 900px,
-                    // sinon nous le déplaçons de 100px vers la gauche
-                    pacMan.style.left = pacManPosition.left === 0 ? 900 + "px" :
-                        pacManPosition.left - 100 + "px"
-                    break
-
-                case 'toRight':
-                    // Si Pac-Man est au bord droit situé à 900px
-                    // nous le ramenons au bord gauche situé à 0px,
-                    // sinon nous le déplaçons de 100px vers la droite
-                    pacMan.style.left = pacManPosition.left === 900 ? 0 :
-                        pacManPosition.left + 100 + "px"
-                    break
-
-                case 'toTop':
-                    // Nous déplaçons Pac-Man de 100px vers le haut
-                    pacMan.style.top = pacManPosition.top - 100 + "px"
-                    break
-
-                case 'toBottom':
-                    // Nous déplaçons Pac-Man de 100px vers le bas
-                    pacMan.style.top = pacManPosition.top + 100 + "px"
-                    break
-            }
+            move(pacMan, pacManPosition, to)
             pacManPosition = getPositionOf(pacMan)
-            redGhostPosition = getPositionOf(redGhost)
-            blueGhostPosition = getPositionOf(blueGhost)
-            orangeGhostPosition = getPositionOf(orangeGhost)
-            if((pacManPosition.left === redGhostPosition.left && pacManPosition.top === redGhostPosition.top) ||
-                (pacManPosition.left === blueGhostPosition.left && pacManPosition.top === blueGhostPosition.top) ||
-                (pacManPosition.left === orangeGhostPosition.left && pacManPosition.top === orangeGhostPosition.top)){
-                gameOver = true
-                //stopGame()
-            }
+            testPositions()
 
         }}, movePacManInterval)
 
@@ -187,10 +199,10 @@ const movePacMan = (to) => {
 const moveRedGhost = () => {
 
     clearInterval(redGhostInterval)
-
+    
     // Obtenir la position de ghost
     redGhostPosition = getPositionOf(redGhost)
-
+    
     //Générer un "to" aléatoire
     const randomInt = Math.floor(Math.random() * 4)
     const randomDirection = directions[randomInt] // Soit 'toLeft', 'toRight', 'toTop', 'toBottom'
@@ -199,29 +211,11 @@ const moveRedGhost = () => {
     //Mettre une intervalle de répétition pour la fonction
     redGhostInterval = setInterval(() => {
         // Évaluer la direction et déplacer le ghost en conséquences s'il ne rencontre pas de mur
+        currentRedGhostDirection = randomDirection
         if (!isTheCharacterBlocked(redGhostPosition, randomDirection)) {
-            currentRedGhostDirection = randomDirection
-            switch (randomDirection) {
-
-                case 'toLeft':
-                    redGhost.style.left = redGhostPosition.left === 0 ? 900 + "px" :
-                        redGhostPosition.left - 100 + "px"
-                    break
-
-                case 'toRight':
-                    redGhost.style.left = redGhostPosition.left === 900 ? 0 :
-                        redGhostPosition.left + 100 + "px"
-                    break
-
-                case 'toTop':
-                    redGhost.style.top = redGhostPosition.top - 100 + "px"
-                    break
-
-                case 'toBottom':
-                    redGhost.style.top = redGhostPosition.top + 100 + "px"
-                    break
-            }
+            move(redGhost, redGhostPosition, randomDirection)
             redGhostPosition = getPositionOf(redGhost)
+            testPositions()
         }
         else {
             moveRedGhost()
@@ -245,29 +239,11 @@ const moveOrangeGhost = () => {
     //Mettre une intervalle de répétition pour la fonction
     orangeGhostInterval = setInterval(() => {
         // Évaluer la direction et déplacer le ghost en conséquences s'il ne rencontre pas de mur
+        currentOrangeGhostDirection = randomDirection
         if (!isTheCharacterBlocked(orangeGhostPosition, randomDirection)) {
-            currentOrangeGhostDirection = randomDirection
-            switch (randomDirection) {
-
-                case 'toLeft':
-                    orangeGhost.style.left = orangeGhostPosition.left === 0 ? 900 + "px" :
-                        orangeGhostPosition.left - 100 + "px"
-                    break
-
-                case 'toRight':
-                    orangeGhost.style.left = orangeGhostPosition.left === 900 ? 0 :
-                        orangeGhostPosition.left + 100 + "px"
-                    break
-
-                case 'toTop':
-                    orangeGhost.style.top = orangeGhostPosition.top - 100 + "px"
-                    break
-
-                case 'toBottom':
-                    orangeGhost.style.top = orangeGhostPosition.top + 100 + "px"
-                    break
-            }
+            move(orangeGhost, orangeGhostPosition, randomDirection)
             orangeGhostPosition = getPositionOf(orangeGhost)
+            testPositions()
         }
         else {
             moveOrangeGhost()
@@ -280,49 +256,48 @@ const moveOrangeGhost = () => {
 const moveBlueGhost = () => {
 
     clearInterval(blueGhostInterval)
-
     // Obtenir la position de ghost
     blueGhostPosition = getPositionOf(blueGhost)
-
     //Générer un "to" aléatoire
     const randomInt = Math.floor(Math.random() * 4)
     const randomDirection = directions[randomInt] // Soit 'toLeft', 'toRight', 'toTop', 'toBottom'
-
-
     //Mettre une intervalle de répétition pour la fonction
     blueGhostInterval = setInterval(() => {
         // Évaluer la direction et déplacer le ghost en conséquences s'il ne rencontre pas de mur
+        currentBlueGhostDirection = randomDirection
         if (!isTheCharacterBlocked(blueGhostPosition, randomDirection)) {
-            currentBlueGhostDirection = randomDirection
-            switch (randomDirection) {
 
-                case 'toLeft':
-                    blueGhost.style.left = blueGhostPosition.left === 0 ? 900 + "px" :
-                        blueGhostPosition.left - 100 + "px"
-                    break
-
-                case 'toRight':
-                    blueGhost.style.left = blueGhostPosition.left === 900 ? 0 :
-                        blueGhostPosition.left + 100 + "px"
-                    break
-
-                case 'toTop':
-                    blueGhost.style.top = blueGhostPosition.top - 100 + "px"
-                    break
-
-                case 'toBottom':
-                    blueGhost.style.top = blueGhostPosition.top + 100 + "px"
-                    break
-            }
+            move(blueGhost, blueGhostPosition, randomDirection)
             blueGhostPosition = getPositionOf(blueGhost)
+            testPositions()
         }
         else {
             moveBlueGhost()
         }
     }, moveGhostInterval)
-
-
 }
+
+const move = (character, from, to) => {
+    switch(to){
+        case 'toLeft':
+            character.dataset.left = from.left === 0 ? 900 : from.left - 100
+            character.style.left = isSmallScreen() ? pxToViewportSize(character.dataset.left) + sizeUnit() : character.dataset.left + sizeUnit()
+            break
+        case 'toRight':
+            character.dataset.left = from.left === 900 ? 0 : from.left + 100
+            character.style.left = isSmallScreen() ? pxToViewportSize(character.dataset.left) + sizeUnit() : character.dataset.left + sizeUnit()
+            break
+        case 'toTop':
+            character.dataset.top = from.top - 100
+            character.style.top = isSmallScreen() ? pxToViewportSize(character.dataset.top) + sizeUnit() : character.dataset.top + sizeUnit()
+            break
+        case 'toBottom':
+            character.dataset.top = from.top + 100
+            character.style.top = isSmallScreen() ? pxToViewportSize(character.dataset.top) + sizeUnit() : character.dataset.top + sizeUnit()
+            break
+    }
+}
+
 
 const displayDots = () => {
     for (let col = 0; col < 10; col++){
@@ -331,7 +306,8 @@ const displayDots = () => {
             dot.className = 'dot'
             dot.style.left = col * 100 + 'px'
             dot.style.top = row * 100 + 'px'
-            dot.id = col * 100 + '_' + row * 100 //ou utiliser data-value
+            dot.dataset.top = row * 100
+            dot.dataset.left = col * 100
             if (!dotsNotToInsert.some(dot_nti => {   //dot_nti => dot_NotToInsert
                 const mustInsert = dot.style.left === dot_nti.left && dot.style.top === dot_nti.top
                 return mustInsert
@@ -345,56 +321,111 @@ const displayDots = () => {
 //principe du jeu
 const removeDot = () => {
     pacManPosition = getPositionOf(pacMan)
-    const dots_nl = map.childNodes
-    dots_nl.forEach(dots => {
-        if (dots.id == pacManPosition.left + "_" + pacManPosition.top){
-            map.removeChild(dots)
-            gameScore++
-            dotsLeft --
-            divScore.textContent = "Score: " + gameScore
-            if (dotsLeft == 0){
-                gameOver = true
-                stopGame()
-            }
+    const dotToRemove = document.querySelector(`.dot[data-top="${ pacManPosition.top }"][data-left="${ pacManPosition.left }"]`)
+    if (dotToRemove) {
+        map.removeChild(dotToRemove)
+        gameScore++
+        dotsLeft --
+        divScore.textContent = gameScore
+        if (dotsLeft == 0){
+            gameOver = true
+            stopGame(false)
         }
-    })
-
+    }
 }
 
 const timer = () => {
     setInterval(function() {
         if (!gameOver){
             time++
-            divTimer.textContent = "Timer: " + time
-            //console.log(time)
+            divTimer.textContent = time
         }
     }, 1000)
 }
 
-const stopGame = () => {
+const stopGame = (lost) => {
     clearInterval(redGhostInterval)
     //console.log("redGhost stopped")
     clearInterval(blueGhostInterval)
     //console.log("blueGhost stopped")
     clearInterval(orangeGhostInterval)
     //console.log("orangeGhost stopped")
+    clearInterval(pacManInterval)
     //affichage du score et du timer
     console.log("Timer: " + time)
     console.log("Score: " + gameScore)
-    gameLevel++
     console.log("Niveau: " + gameLevel)
     //moveGhostInterval -= 15
-    setTimeout(start, 3000)
+    if(!lost){
+        gameOver = false
+        setTimeout(start(), 0)
+        gameLevel++
+    }
+    else {
+        endGameBlock.style.display = "flex"
+    }
+    //gamePage.style.display = 'none'
+    //scorePage.style.display = 'flex'
+}
+
+endButton.addEventListener('click', () => {
+    gamePage.style.display = 'none'
+    endGameBlock.style.display = "none"
+    scorePage.style.display = 'flex'
+})
+
+const testPositions = () => {
+    pacManPosition = getPositionOf(pacMan)
+    blueGhostPosition = getPositionOf(blueGhost)
+    redGhostPosition = getPositionOf(redGhost)
+    orangeGhostPosition = getPositionOf(orangeGhost)
+
+    if((pacManPosition.left == blueGhostPosition.left && pacManPosition.top == blueGhostPosition.top) || 
+    (pacManPosition.left == redGhostPosition.left && pacManPosition.top == redGhostPosition.top) ||
+    (pacManPosition.left == orangeGhostPosition.left && pacManPosition.top == orangeGhostPosition.top)){
+        gameOver = true
+        stopGame(true)
+    }
 }
 
 const start = () => {
-    pacManPosition = getPositionOf(pacMan) //déclarer tout en haut pr ne pas répéter avec movePacMan ??
-
+    //On remet les éléments à leur place
+    pacManPosition = getPositionOf(pacMan) 
+    blueGhostPosition = getPositionOf(blueGhost)
+    orangeGhostPosition = getPositionOf(orangeGhost)
+    redGhostPosition = getPositionOf(redGhost)
     if (pacManPosition !== {top:400, left:900}){
+        pacMan.dataset.top = 400
         pacMan.style.top = "400px"
+        pacMan.dataset.left = 900
         pacMan.style.left = "900px"
     }
+    if (orangeGhostPosition !== {top:400, left:900}){
+        orangeGhost.dataset.top = 300
+        orangeGhost.style.top = "300px"
+        orangeGhost.dataset.left = 400
+        orangeGhost.style.left = "400px"
+    }
+    if (redGhostPosition !== {top:400, left:900}){
+        redGhost.dataset.top = 300
+        redGhost.style.top = "300px"
+        redGhost.dataset.left = 400
+        redGhost.style.left = "400px"
+    }
+    if (blueGhostPosition !== {top:400, left:900}){
+        blueGhost.dataset.top = 300
+        blueGhost.style.top = "300px"
+        blueGhost.dataset.left = 400
+        blueGhost.style.left = "400px"
+    }
+    
+    //On remet pacMan dans la bonne disposition
+    if(pacMan.className != "toLeft") pacMan.className = "toLeft"
+    
     dotsLeft = dotsToInsert.length
+    if(time == 0) divTimer.textContent = "0"
+    if(gameScore == 0) divScore.textContent = "0"
+    divNiveau.textContent = gameLevel
     moveRedGhost()
     moveOrangeGhost()
     moveBlueGhost()
@@ -456,6 +487,32 @@ const isTheCharacterBlocked = (characterPosition, movingDirection) => {
 
 }
 
+const checkUsername = () => {
+    //Var Ajax
+    let xhr = new XMLHttpRequest()
+    xhr.onreadystatechange = function() {
+        if((this.readyState == 4 && this.status == 200)){
+            console.log("réussi")
+            return true
+        }
+    }
+    xhr.open("POST", "./datas.php?function=1", true)
+    xhr.send()
+}
+
+const insertScore = () => {
+    //Var Ajax
+    let xhr = new XMLHttpRequest()
+    xhr.onreadystatechange = function() {
+        if((this.readyState == 4 && this.status == 200)){
+            console.log("réussi")
+            return true
+        }
+    }
+    xhr.open("POST", "./datas.php?function=2", true)
+    xhr.send()
+}
+
 // Nous créons une variable vide au début du code
 // let userName
 
@@ -463,10 +520,47 @@ submit.addEventListener('click', (e) => {
      e.preventDefault()
      //Vérifier que inputName.value n'est pas vide et contient au moins 3 caractères
     console.log(inputName.value)
-    if(inputName.value !== "" && inputName.value.length >= 3){
+    if(inputName.value !== "" && inputName.value.length >= 2 && inputName.value.length <= 8){
         userName = inputName.value
+        let verify = setTimeout(checkUsername(), 100)
         //Lancer la partie
-        start()
-        gameLevel = 1
+        if(verify){
+           start()
+            gameLevel = 1
+            homePage.style.display = 'none'
+            gamePage.style.display = 'flex' 
+        }
+        else {
+            alert("Pseudo déjà choisi")
+        }
+        
     }
 })
+//Envoi des données en POST
+function postToURL(url, values) {
+    values = values || {};
+
+    var form = createElement("form", {action: url,
+                                      method: "POST",
+                                      style: "display: none"});
+    for (var property in values) {
+        if (values.hasOwnProperty(property)) {
+            var value = values[property];
+            if (value instanceof Array) {
+                for (var i = 0, l = value.length; i < l; i++) {
+                    form.appendChild(createElement("input", {type: "hidden",
+                                                             name: property,
+                                                             value: value[i]}));
+                }
+            }
+            else {
+                form.appendChild(createElement("input", {type: "hidden",
+                                                         name: property,
+                                                         value: value}));
+            }
+        }
+    }
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+}
