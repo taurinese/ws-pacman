@@ -211,17 +211,23 @@ const moveRedGhost = () => {
 
     //Mettre une intervalle de répétition pour la fonction
     redGhostInterval = setInterval(() => {
-        // Évaluer la direction et déplacer le ghost en conséquences s'il ne rencontre pas de mur
-        currentRedGhostDirection = randomDirection
-        if (!isTheCharacterBlocked(redGhostPosition, randomDirection)) {
-            move(redGhost, redGhostPosition, randomDirection)
-            redGhostPosition = getPositionOf(redGhost)
-            testPositions()
+        if(gameLevel > 1){
+            moveToPacMan(redGhost)
         }
         else {
-            moveRedGhost()
-            return
+            // Évaluer la direction et déplacer le ghost en conséquences s'il ne rencontre pas de mur
+            currentRedGhostDirection = randomDirection
+            if (!isTheCharacterBlocked(redGhostPosition, randomDirection)) {
+                move(redGhost, redGhostPosition, randomDirection)
+                redGhostPosition = getPositionOf(redGhost)
+                testPositions()
+            }
+            else {
+                moveRedGhost()
+                return
+            }     
         }
+
     }, moveGhostInterval)
 
 
@@ -239,17 +245,23 @@ const moveOrangeGhost = () => {
 
     //Mettre une intervalle de répétition pour la fonction
     orangeGhostInterval = setInterval(() => {
-        // Évaluer la direction et déplacer le ghost en conséquences s'il ne rencontre pas de mur
-        currentOrangeGhostDirection = randomDirection
-        if (!isTheCharacterBlocked(orangeGhostPosition, randomDirection)) {
-            move(orangeGhost, orangeGhostPosition, randomDirection)
-            orangeGhostPosition = getPositionOf(orangeGhost)
-            testPositions()
+        if(gameLevel > 2){
+            moveToPacMan(orangeGhost)
         }
-        else {
-            moveOrangeGhost()
-            return
+        else{
+            // Évaluer la direction et déplacer le ghost en conséquences s'il ne rencontre pas de mur
+            currentOrangeGhostDirection = randomDirection
+            if (!isTheCharacterBlocked(orangeGhostPosition, randomDirection)) {
+                move(orangeGhost, orangeGhostPosition, randomDirection)
+                orangeGhostPosition = getPositionOf(orangeGhost)
+                testPositions()
+            }
+            else {
+                moveOrangeGhost()
+                return
+            }
         }
+
     }, moveGhostInterval)
 
 
@@ -264,17 +276,23 @@ const moveBlueGhost = () => {
     const randomDirection = directions[randomInt] // Soit 'toLeft', 'toRight', 'toTop', 'toBottom'
     //Mettre une intervalle de répétition pour la fonction
     blueGhostInterval = setInterval(() => {
-        // Évaluer la direction et déplacer le ghost en conséquences s'il ne rencontre pas de mur
-        currentBlueGhostDirection = randomDirection
-        if (!isTheCharacterBlocked(blueGhostPosition, randomDirection)) {
+        if(gameLevel > 3){
+            moveToPacMan(blueGhost)
+        }
+        else{
+            // Évaluer la direction et déplacer le ghost en conséquences s'il ne rencontre pas de mur
+            currentBlueGhostDirection = randomDirection
+            if (!isTheCharacterBlocked(blueGhostPosition, randomDirection)) {
 
-            move(blueGhost, blueGhostPosition, randomDirection)
-            blueGhostPosition = getPositionOf(blueGhost)
-            testPositions()
+                move(blueGhost, blueGhostPosition, randomDirection)
+                blueGhostPosition = getPositionOf(blueGhost)
+                testPositions()
+            }
+            else {
+                moveBlueGhost()
+            }
         }
-        else {
-            moveBlueGhost()
-        }
+
     }, moveGhostInterval)
 }
 
@@ -299,7 +317,7 @@ const move = (character, from, to) => {
     }
 }
 
-const followPacMan = (ghost) => {
+/* const followPacMan = (ghost) => {
     //On récupère les positions de PacMan et du Ghost ainsi que le delta
     pacManPosition = getPositionOf(pacMan)
     ghostPosition = getPositionOf(ghost)
@@ -321,6 +339,43 @@ const getDelta = (pacManPosition, ghostPosition) => {
     const top = pacManPosition.top - ghostPosition.top
     const left = pacManPosition.left - ghostPosition.left
     
+} */
+
+const moveToPacMan = (ghost) => {
+    const pacManPosition = getPositionOf(pacMan)
+    const ghostPosition = getPositionOf(ghost)
+    const delta = getDelta(pacManPosition, ghostPosition)
+    console.log('delta:', delta)
+    let direction
+    if (delta.top === delta.left) direction = [delta.topDirection, delta.leftDirection][Math.floor(Math.random() * 2)]
+    if (delta.topDirection === null) direction = delta.leftDirection
+    else if (delta.leftDirection === null) direction = delta.topDirection
+    else direction = delta.top < delta.left ? delta.topDirection : delta.leftDirection
+    
+    if (isTheCharacterBlocked(ghostPosition, direction)) {
+        direction = direction === delta.topDirection ? delta.leftDirection : delta.topDirection
+        if (direction === null) {
+            let otherDirections = directions.filter(direction => direction !== delta.topDirection && direction !== delta.leftDirection)
+            direction = otherDirections[Math.floor(Math.random() * 2)]
+        }
+        console.log('direction:', direction)
+    }
+
+    while (isTheCharacterBlocked(ghostPosition, direction)) {
+        let otherDirections = directions.filter(direction => direction !== delta.topDirection && direction !== delta.leftDirection)
+        direction = otherDirections[Math.floor(Math.random() * 2)]
+    }
+    move(ghost, ghostPosition, direction)
+}
+const getDelta = (pacManPosition, ghostPosition) => {
+    const top = pacManPosition.top - ghostPosition.top
+    const left = pacManPosition.left - ghostPosition.left
+    let topDirection, leftDirection
+    if (top === 0) topDirection = null
+    else topDirection = top > 0 ? 'toBottom' : 'toTop'
+    if (left === 0) leftDirection = null
+    else leftDirection = left > 0 ? 'toRight' : 'toLeft'
+    return { top, left, topDirection, leftDirection }
 }
 
 const displayDots = () => {
