@@ -4,8 +4,9 @@ const redGhost = document.querySelector('img[src="assets/img/redghost.png"]')
 const orangeGhost = document.querySelector('img[src="assets/img/orangeghost.png"]')
 const blueGhost = document.querySelector('img[src="assets/img/blueghost.png"]')
 const map = document.querySelector('.map')
-const submit = document.querySelector('button[type=submit]')
+const submit = document.querySelector('button[name=button_submit]')
 const inputName = document.querySelector('input[type=text]')
+const inputBlock = document.querySelector('.input-block')
 const divScore = document.querySelector('#score')
 const divTimer = document.querySelector('#timer')
 const divNiveau = document.querySelector('#niveau')
@@ -18,7 +19,7 @@ const gamePage = document.querySelector('.game-block')
 const scorePage = document.querySelector('.tableScore')
 const endGameBlock = document.querySelector('.endGame')
 
-
+let verifyUsername
 
 let pacManInterval
 let redGhostInterval
@@ -298,6 +299,29 @@ const move = (character, from, to) => {
     }
 }
 
+const followPacMan = (ghost) => {
+    //On récupère les positions de PacMan et du Ghost ainsi que le delta
+    pacManPosition = getPositionOf(pacMan)
+    ghostPosition = getPositionOf(ghost)
+    const delta = getDelta(pacManPosition, ghostPosition)
+
+    //On définit la direction dans laquelle on doit aller
+    
+
+
+
+
+    ghostDirection = '';
+    //On déplace le ghost dans cette direction
+    move(ghost, ghostPosition, ghostDirection)
+
+}
+
+const getDelta = (pacManPosition, ghostPosition) => {
+    const top = pacManPosition.top - ghostPosition.top
+    const left = pacManPosition.left - ghostPosition.left
+    
+}
 
 const displayDots = () => {
     for (let col = 0; col < 10; col++){
@@ -358,8 +382,8 @@ const stopGame = (lost) => {
     //moveGhostInterval -= 15
     if(!lost){
         gameOver = false
-        setTimeout(start(), 0)
         gameLevel++
+        setTimeout(start(), 0)
     }
     else {
         endGameBlock.style.display = "flex"
@@ -369,6 +393,8 @@ const stopGame = (lost) => {
 }
 
 endButton.addEventListener('click', () => {
+    //setTimeout(postForm(), 1000)
+    setTimeout(insertScore(), 1000)
     gamePage.style.display = 'none'
     endGameBlock.style.display = "none"
     scorePage.style.display = 'flex'
@@ -487,17 +513,30 @@ const isTheCharacterBlocked = (characterPosition, movingDirection) => {
 
 }
 
-const checkUsername = () => {
-    //Var Ajax
+const checkUsername = () => {    
+
+    /*fetch('https://jsonplaceholder.typicode.com/todos/1')
+    .then(response => response.json())
+    .then(json => console.log(json)) */
+
+
+
+    return new Promise((resolve, reject) => {
+        //Var Ajax
     let xhr = new XMLHttpRequest()
     xhr.onreadystatechange = function() {
         if((this.readyState == 4 && this.status == 200)){
-            console.log("réussi")
-            return true
+            verifyUsername = this.responseText
         }
     }
-    xhr.open("POST", "./datas.php?function=1", true)
-    xhr.send()
+    xhr.open('POST', "./datas.php?function=verif_username")
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
+    xhr.send('username=' + userName);
+
+    if (verifyUsername == "disponible") resolve()
+    else if (verifyUsername == "non") reject()
+    })
+    
 }
 
 const insertScore = () => {
@@ -505,16 +544,18 @@ const insertScore = () => {
     let xhr = new XMLHttpRequest()
     xhr.onreadystatechange = function() {
         if((this.readyState == 4 && this.status == 200)){
-            console.log("réussi")
+            console.log(this.responseText)
             return true
         }
     }
-    xhr.open("POST", "./datas.php?function=2", true)
-    xhr.send()
+    xhr.open('POST', "./datas.php?function=insert_score")
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
+    xhr.send('username=' + userName + '&timer=' + time + '&score=' + gameScore + '&level=' + gameLevel);
 }
 
 // Nous créons une variable vide au début du code
 // let userName
+let isInsert = 0
 
 submit.addEventListener('click', (e) => {
      e.preventDefault()
@@ -522,45 +563,32 @@ submit.addEventListener('click', (e) => {
     console.log(inputName.value)
     if(inputName.value !== "" && inputName.value.length >= 2 && inputName.value.length <= 8){
         userName = inputName.value
-        let verify = setTimeout(checkUsername(), 100)
+        checkUsername().then( () => {      //
+            start()
+            gameLevel = 1
+            homePage.style.display = 'none'
+            gamePage.style.display = 'flex' 
+        }).catch(() => {
+            //alert("Pseudo déjà choisi")
+            const errorText = document.createElement('h4')
+            if (isInsert == 0) {
+                errorText.textContent = "Ce pseudo existe déjà!"
+                inputBlock.appendChild(errorText)
+                isInsert++
+            }
+            
+        })
         //Lancer la partie
-        if(verify){
-           start()
+        /*console.log(verifyUsername)
+        if(verifyUsername == "disponible"){
+            start()
             gameLevel = 1
             homePage.style.display = 'none'
             gamePage.style.display = 'flex' 
         }
-        else {
+        else if(verifyUsername == "non"){
             alert("Pseudo déjà choisi")
-        }
+        } */
         
     }
 })
-//Envoi des données en POST
-function postToURL(url, values) {
-    values = values || {};
-
-    var form = createElement("form", {action: url,
-                                      method: "POST",
-                                      style: "display: none"});
-    for (var property in values) {
-        if (values.hasOwnProperty(property)) {
-            var value = values[property];
-            if (value instanceof Array) {
-                for (var i = 0, l = value.length; i < l; i++) {
-                    form.appendChild(createElement("input", {type: "hidden",
-                                                             name: property,
-                                                             value: value[i]}));
-                }
-            }
-            else {
-                form.appendChild(createElement("input", {type: "hidden",
-                                                         name: property,
-                                                         value: value}));
-            }
-        }
-    }
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
-}

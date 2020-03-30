@@ -16,6 +16,12 @@ a {
 a :hover {
     color:grey;
 }
+h4 {
+    margin:0;
+    padding:0;
+    color:red;
+    font-size:25px;
+}
 .map {
     background-color: #0b0b0b;
     width: 1000px;
@@ -30,6 +36,7 @@ a :hover {
     font-size:35px;
     text-align:right;
     border-radius: 10px;
+    color:yellow;
 }
 .timer {
     width:200px;
@@ -196,6 +203,10 @@ table {
 td {
     border: 2px white solid;
     padding:5px;
+    position:relative;
+}
+.td-first {
+    padding-left:45px;
 }
 .tableScore > img {
     width:30%;
@@ -238,6 +249,21 @@ form {
     justify-content: center;
     align-items: center;
 }
+
+.pac-score {
+    position: absolute;
+    left:0px;
+}
+
+
+
+
+
+
+
+
+
+
 @media (orientation: portrait) and (max-width: 1000px){
     .map {
         width:100%;
