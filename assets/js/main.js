@@ -20,6 +20,8 @@ const scorePage = document.querySelector('.tableScore')
 const endGameBlock = document.querySelector('.endGame')
 
 let verifyUsername
+let userNameExists
+let isInsert
 
 let pacManInterval
 let redGhostInterval
@@ -438,9 +440,12 @@ const stopGame = (lost) => {
     //scorePage.style.display = 'flex'
 }
 
-endButton.addEventListener('click', () => {
-    //setTimeout(postForm(), 1000)
-    setTimeout(insertScore(), 1000)
+endButton.addEventListener('click', async () => {
+    if(confirm("Souhaitez-vous enregistrer votre score?")){
+        isInsert = await insertScore()
+        if(!isInsert) alert("Erreur lors de l'insertion en base de données")
+        else alert("Votre score a été enregistré!")
+    }
     gamePage.style.display = 'none'
     endGameBlock.style.display = "none"
     scorePage.style.display = 'flex'
@@ -559,61 +564,51 @@ const isTheCharacterBlocked = (characterPosition, movingDirection) => {
 
 }
 
-const checkUsername = () => {    
+const checkUsername = async () => {    
 
     console.log(userName)
-    fetch('./datas.php?function=verif_username', {method: 'POST', headers: {"Content-Type" : "text/plain"}, body: username = userName})
-    .then(response => {
-        console.log(response)
-        if(response == 'disponible') return true
-        else return false
-    })
-
-
-/*
-    return new Promise((resolve, reject) => {
-        //Var Ajax
-    let xhr = new XMLHttpRequest()
-    xhr.onreadystatechange = function() {
-        if((this.readyState == 4 && this.status == 200)){
-            verifyUsername = this.responseText
-        }
-    }
-    xhr.open('POST', "./datas.php?function=verif_username")
-    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
-    xhr.send('username=' + userName);
-
-    if (verifyUsername == "disponible") resolve()
-    else if (verifyUsername == "non") reject()
-    })*/
+    const response = await fetch('./datas.php?function=verif_username', {
+        method: 'POST', 
+        headers: {"Content-Type" : "application/json; charset=UTF-8"}, 
+        body: JSON.stringify({
+            username : userName
+    })})
+    const json = await response.json()
+    json.exist == false? result = true : result = false
+    userNameExists = json.exist
+    console.log(result)
+    return result
     
 }
 
-const insertScore = () => {
-    //Var Ajax
-    let xhr = new XMLHttpRequest()
-    xhr.onreadystatechange = function() {
-        if((this.readyState == 4 && this.status == 200)){
-            console.log(this.responseText)
-            return true
+const insertScore = async () => {
+
+    const response = await fetch('./datas.php?function=insert_score', {
+        method: 'POST', 
+        headers: {"Content-Type" : "application/json; charset=UTF-8"}, 
+        body: JSON.stringify({
+            username : userName,
+            timer : time,
+            score: gameScore,
+            level: gameLevel,
+            exist: userNameExists})
         }
-    }
-    xhr.open('POST', "./datas.php?function=insert_score")
-    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
-    xhr.send('username=' + userName + '&timer=' + time + '&score=' + gameScore + '&level=' + gameLevel);
+    )
+    const json = await response.json()
+    json.success == true? result = true : result = false
+    console.log(result)
+    return result
 }
 
-// Nous créons une variable vide au début du code
-// let userName
-let isInsert = 0
 
-submit.addEventListener('click', (e) => {
+submit.addEventListener('click', async (e) => {
      e.preventDefault()
      //Vérifier que inputName.value n'est pas vide et contient au moins 3 caractères
     //console.log(inputName.value)
     if(inputName.value !== "" && inputName.value.length >= 2 && inputName.value.length <= 8){
         userName = inputName.value
-        let canStart = checkUsername()
+        let canStart = await checkUsername()
+        console.log(canStart)
         if(canStart == true) {      //
             start()
             gameLevel = 1
@@ -621,14 +616,15 @@ submit.addEventListener('click', (e) => {
             gamePage.style.display = 'flex' 
         }
         else{
-            //alert("Pseudo déjà choisi")
-            const errorText = document.createElement('h4')
-            if (isInsert == 0) {
-                errorText.textContent = "Ce pseudo existe déjà!"
-                inputBlock.appendChild(errorText)
-                isInsert++
+            if(confirm("Ce pseudo existe déjà! Voulez-vous quand même continuer?")){
+                start()
+                gameLevel = 1
+                homePage.style.display = 'none'
+                gamePage.style.display = 'flex' 
+            }  
+            else {
+                inputName.value = ""
             }
-            
         }
         //Lancer la partie
         /*console.log(verifyUsername)
