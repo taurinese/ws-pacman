@@ -32,7 +32,9 @@ let blueGhostPosition
 let orangeGhostPosition
 
 let movePacManInterval = 150
-let moveGhostInterval = 400
+let moveRedGhostInterval = 500
+let moveBlueGhostInterval = 500
+let moveOrangeGhostInterval = 500
 
 let currentRedGhostDirection
 let currentOrangeGhostDirection
@@ -211,6 +213,10 @@ const moveRedGhost = () => {
 
     //Mettre une intervalle de répétition pour la fonction
     redGhostInterval = setInterval(() => {
+        if(gameLevel > 4) moveRedGhostInterval = 400
+        else if(gameLevel > 7) moveRedGhostInterval = 300
+        else if(gameLevel > 10) moveRedGhostInterval = 200
+        else if(gameLevel > 13) moveRedGhostInterval = 100
         if(gameLevel > 1){
             moveToPacMan(redGhost)
         }
@@ -228,7 +234,7 @@ const moveRedGhost = () => {
             }     
         }
 
-    }, moveGhostInterval)
+    }, moveRedGhostInterval)
 
 
 }
@@ -245,6 +251,10 @@ const moveOrangeGhost = () => {
 
     //Mettre une intervalle de répétition pour la fonction
     orangeGhostInterval = setInterval(() => {
+        if(gameLevel > 5) moveOrangeGhostInterval = 400
+        else if(gameLevel > 8) moveOrangeGhostInterval = 300
+        else if(gameLevel > 11) moveOrangeGhostInterval = 200
+        else if(gameLevel > 14) moveOrangeGhostInterval = 100
         if(gameLevel > 2){
             moveToPacMan(orangeGhost)
         }
@@ -262,7 +272,7 @@ const moveOrangeGhost = () => {
             }
         }
 
-    }, moveGhostInterval)
+    }, moveOrangeGhostInterval)
 
 
 }
@@ -276,6 +286,10 @@ const moveBlueGhost = () => {
     const randomDirection = directions[randomInt] // Soit 'toLeft', 'toRight', 'toTop', 'toBottom'
     //Mettre une intervalle de répétition pour la fonction
     blueGhostInterval = setInterval(() => {
+        if(gameLevel > 6) moveBlueGhostInterval = 400
+        else if(gameLevel > 9) moveBlueGhostInterval = 300
+        else if(gameLevel > 12) moveBlueGhostInterval = 200
+        else if(gameLevel > 15) moveBlueGhostInterval = 100
         if(gameLevel > 3){
             moveToPacMan(blueGhost)
         }
@@ -293,7 +307,7 @@ const moveBlueGhost = () => {
             }
         }
 
-    }, moveGhostInterval)
+    }, moveBlueGhostInterval)
 }
 
 const move = (character, from, to) => {
@@ -317,29 +331,6 @@ const move = (character, from, to) => {
     }
 }
 
-/* const followPacMan = (ghost) => {
-    //On récupère les positions de PacMan et du Ghost ainsi que le delta
-    pacManPosition = getPositionOf(pacMan)
-    ghostPosition = getPositionOf(ghost)
-    const delta = getDelta(pacManPosition, ghostPosition)
-
-    //On définit la direction dans laquelle on doit aller
-    
-
-
-
-
-    ghostDirection = '';
-    //On déplace le ghost dans cette direction
-    move(ghost, ghostPosition, ghostDirection)
-
-}
-
-const getDelta = (pacManPosition, ghostPosition) => {
-    const top = pacManPosition.top - ghostPosition.top
-    const left = pacManPosition.left - ghostPosition.left
-    
-} */
 
 const moveToPacMan = (ghost) => {
     const pacManPosition = getPositionOf(pacMan)
@@ -481,19 +472,19 @@ const start = () => {
         pacMan.dataset.left = 900
         pacMan.style.left = "900px"
     }
-    if (orangeGhostPosition !== {top:400, left:900}){
+    if (orangeGhostPosition !== {top:300, left:400}){
         orangeGhost.dataset.top = 300
         orangeGhost.style.top = "300px"
         orangeGhost.dataset.left = 400
         orangeGhost.style.left = "400px"
     }
-    if (redGhostPosition !== {top:400, left:900}){
+    if (redGhostPosition !== {top:300, left:400}){
         redGhost.dataset.top = 300
         redGhost.style.top = "300px"
         redGhost.dataset.left = 400
         redGhost.style.left = "400px"
     }
-    if (blueGhostPosition !== {top:400, left:900}){
+    if (blueGhostPosition !== {top:300, left:400}){
         blueGhost.dataset.top = 300
         blueGhost.style.top = "300px"
         blueGhost.dataset.left = 400
@@ -570,12 +561,16 @@ const isTheCharacterBlocked = (characterPosition, movingDirection) => {
 
 const checkUsername = () => {    
 
-    /*fetch('https://jsonplaceholder.typicode.com/todos/1')
-    .then(response => response.json())
-    .then(json => console.log(json)) */
+    console.log(userName)
+    fetch('./datas.php?function=verif_username', {method: 'POST', headers: {"Content-Type" : "text/plain"}, body: username = userName})
+    .then(response => {
+        console.log(response)
+        if(response == 'disponible') return true
+        else return false
+    })
 
 
-
+/*
     return new Promise((resolve, reject) => {
         //Var Ajax
     let xhr = new XMLHttpRequest()
@@ -590,7 +585,7 @@ const checkUsername = () => {
 
     if (verifyUsername == "disponible") resolve()
     else if (verifyUsername == "non") reject()
-    })
+    })*/
     
 }
 
@@ -615,15 +610,17 @@ let isInsert = 0
 submit.addEventListener('click', (e) => {
      e.preventDefault()
      //Vérifier que inputName.value n'est pas vide et contient au moins 3 caractères
-    console.log(inputName.value)
+    //console.log(inputName.value)
     if(inputName.value !== "" && inputName.value.length >= 2 && inputName.value.length <= 8){
         userName = inputName.value
-        checkUsername().then( () => {      //
+        let canStart = checkUsername()
+        if(canStart == true) {      //
             start()
             gameLevel = 1
             homePage.style.display = 'none'
             gamePage.style.display = 'flex' 
-        }).catch(() => {
+        }
+        else{
             //alert("Pseudo déjà choisi")
             const errorText = document.createElement('h4')
             if (isInsert == 0) {
@@ -632,7 +629,7 @@ submit.addEventListener('click', (e) => {
                 isInsert++
             }
             
-        })
+        }
         //Lancer la partie
         /*console.log(verifyUsername)
         if(verifyUsername == "disponible"){

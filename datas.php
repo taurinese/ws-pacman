@@ -19,10 +19,10 @@ function verifUsername(){
     $result = $query->fetchAll();
 
     if(empty($result)){
-        echo "disponible";
+        return json_encode("disponible");
     }
     else {
-        echo "non";
+        return json_encode("non");
     }
 }
 
