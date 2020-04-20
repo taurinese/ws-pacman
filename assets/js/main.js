@@ -12,6 +12,7 @@ const divTimer = document.querySelector('#timer')
 const divNiveau = document.querySelector('#niveau')
 //const submit = document.querySelector('#button_submit')
 const endButton = document.querySelector('#end-button')
+const newGameButton = document.getElementById('newGame')
 
 //Constante blocs de HTML
 const homePage = document.querySelector('.centered-block')
@@ -440,12 +441,13 @@ const stopGame = (lost) => {
     //scorePage.style.display = 'flex'
 }
 
-endButton.addEventListener('click', async () => {
+endButton.addEventListener('click',  () => {
     if(confirm("Souhaitez-vous enregistrer votre score?")){
-        isInsert = await insertScore()
+        isInsert =  insertScore()
         if(!isInsert) alert("Erreur lors de l'insertion en base de données")
         else alert("Votre score a été enregistré!")
     }
+    getBestScore()
     gamePage.style.display = 'none'
     endGameBlock.style.display = "none"
     scorePage.style.display = 'flex'
@@ -567,9 +569,10 @@ const isTheCharacterBlocked = (characterPosition, movingDirection) => {
 const checkUsername = async () => {    
 
     console.log(userName)
-    const response = await fetch('./datas.php?function=verif_username', {
+    const response = await fetch('./index.php?function=verif_username', {
         method: 'POST', 
-        headers: {"Content-Type" : "application/json; charset=UTF-8"}, 
+        headers: {"Content-Type" : "application/json; charset=UTF-8"
+    }, 
         body: JSON.stringify({
             username : userName
     })})
@@ -583,9 +586,11 @@ const checkUsername = async () => {
 
 const insertScore = async () => {
 
-    const response = await fetch('./datas.php?function=insert_score', {
+    const response = await fetch('./index.php?function=insert_score', {
         method: 'POST', 
-        headers: {"Content-Type" : "application/json; charset=UTF-8"}, 
+        headers: {"Content-Type" : "application/json; charset=UTF-8"
+
+    }, 
         body: JSON.stringify({
             username : userName,
             timer : time,
@@ -640,3 +645,34 @@ submit.addEventListener('click', async (e) => {
         
     }
 })
+const getBestScore = async () => {    
+
+    const response = await fetch('./index.php?function=get_best_score', {
+        method: 'POST', 
+        headers: {"Content-Type" : "application/json; charset=UTF-8"}, 
+        })
+    const json = await response.json()
+
+     let table = document.createElement("table")
+     let table_th = document.createElement("thead")
+     table_th.innerHTML = "<td>UNSERNAME</td><td>SCORE</td><td>TIMER</td><td>MAX_LVL</td>"
+     table.appendChild(table_th)
+
+     json.forEach(score => {
+         const table_tr = document.createElement("tr")
+         const s_username = document.createElement("td")
+         const s_time = document.createElement("td")
+         const s_score = document.createElement("td")
+         const s_level = document.createElement("td")
+
+         s_username.innerHTML = score.username
+         s_time.innerHTML = score.timer
+         s_score.innerHTML = score.score
+         s_level.innerHTML = score.max_lvl
+
+         table_tr.append(s_username, s_score, s_time, s_level)
+         table.appendChild(table_tr)
+     });
+    scorePage.insertBefore(table, newGameButton)
+}
+
