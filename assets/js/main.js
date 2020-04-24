@@ -48,11 +48,11 @@ let dotsLeft = 0
 let time = 0
 let userName
 
-let gameOver
+let gameOver = false
 let gameLevel = 1
 
 const directions = [ 'toLeft', 'toRight', 'toTop', 'toBottom' ]
-
+/************************************************************************************************************** */
 //Responsive
 
 const maxSize = 1000
@@ -91,6 +91,7 @@ mqlMaxWidth.addListener(e => rearrangeElements())
 mqlMaxHeight.addListener(e => rearrangeElements())
 mqlOrientation.addListener(e => rearrangeElements())
 
+/************************************************************************************************************** */
 // Collection des murs axe horizontal droite-gauche
 const blockedSquaresToLeft = [
     {top:300, left:200},{top:500, left:200},{top:700, left:200},{top:200, left:300},{top:300, left:300},{top:500, left:300},{top:800, left:300},
@@ -161,6 +162,85 @@ const dotsToInsert = [
     {top: '900px', left: '0px'}, {top: '900px', left: '100px'}, {top: '900px', left: '200px'}, {top: '900px', left: '300px'}, {top: '900px', left: '400px'},
     {top: '900px', left: '500px'}, {top: '900px', left: '600px'}, {top: '900px', left: '700px'}, {top: '900px', left: '800px'}, {top: '900px', left: '900px'}
 ]
+/************************************************************************************************************** */
+//Fonctions principales
+
+const start = () => {
+    //On remet les éléments à leur place
+    pacManPosition = getPositionOf(pacMan) 
+    blueGhostPosition = getPositionOf(blueGhost)
+    orangeGhostPosition = getPositionOf(orangeGhost)
+    redGhostPosition = getPositionOf(redGhost)
+    if (pacManPosition !== {top:400, left:900}){
+        pacMan.dataset.top = 400
+        pacMan.style.top = "400px"
+        pacMan.dataset.left = 900
+        pacMan.style.left = "900px"
+    }
+    if (orangeGhostPosition !== {top:300, left:400}){
+        orangeGhost.dataset.top = 300
+        orangeGhost.style.top = "300px"
+        orangeGhost.dataset.left = 400
+        orangeGhost.style.left = "400px"
+    }
+    if (redGhostPosition !== {top:300, left:400}){
+        redGhost.dataset.top = 300
+        redGhost.style.top = "300px"
+        redGhost.dataset.left = 400
+        redGhost.style.left = "400px"
+    }
+    if (blueGhostPosition !== {top:300, left:400}){
+        blueGhost.dataset.top = 300
+        blueGhost.style.top = "300px"
+        blueGhost.dataset.left = 400
+        blueGhost.style.left = "400px"
+    }
+    
+    //On remet pacMan dans la bonne disposition
+    if(pacMan.className != "toLeft") pacMan.className = "toLeft"
+    
+    dotsLeft = dotsToInsert.length
+    if(time == 0) divTimer.textContent = "0"
+    if(gameScore == 0) divScore.textContent = "0"
+    divNiveau.textContent = gameLevel
+    moveRedGhost()
+    moveOrangeGhost()
+    moveBlueGhost()
+    displayDots()
+    timer()
+}
+
+
+const displayDots = () => {
+    for (let col = 0; col < 10; col++){
+        for (let row = 0; row < 10; row++){
+            const dot = document.createElement('div')
+            dot.className = 'dot'
+            dot.style.left = col * 100 + 'px'
+            dot.style.top = row * 100 + 'px'
+            dot.dataset.top = row * 100
+            dot.dataset.left = col * 100
+            if (!dotsNotToInsert.some(dot_nti => {   //dot_nti => dot_NotToInsert
+                const mustInsert = dot.style.left === dot_nti.left && dot.style.top === dot_nti.top
+                return mustInsert
+            })){
+                map.insertBefore(dot, pacMan)
+            }
+        }
+    }
+}
+
+
+const timer = () => {
+    setInterval(function() {
+        if (!gameOver){
+            time++
+            divTimer.textContent = time
+        }
+    }, 1000)
+}
+
+
 //Récupérer l'emplacement d'un élément
 const getPositionOf = (element) => {
     const top = parseInt(element.dataset.top, 10)
@@ -168,7 +248,9 @@ const getPositionOf = (element) => {
     return {top, left}
 }
 
-//Déplacement du pacMan
+
+/************************************************************************************************************** */
+// Fonctions de déplacement
 
 const movePacMan = (to) => {
 
@@ -200,7 +282,42 @@ const movePacMan = (to) => {
 
 }
 
-//Déplacement du fantôme
+//Pacman s'arrête quand il rencontre un mur
+const isTheCharacterBlocked = (characterPosition, movingDirection) => {
+
+    // Nous déterminons quel tableau est concerné par la direction prise
+    let blockedSquares
+
+    switch (movingDirection) {
+
+        case 'toLeft':
+            blockedSquares = blockedSquaresToLeft
+            removeDot()
+            break
+        case 'toRight':
+            blockedSquares = blockedSquaresToRight
+            removeDot()
+            break
+        case 'toTop':
+            blockedSquares = blockedSquaresToTop
+            removeDot()
+            break
+        case 'toBottom':
+            blockedSquares = blockedSquaresToBottom
+            removeDot()
+            break
+    }
+
+    // Nous retournons un booléen indiquant si la position du personnage
+    // est référencée dans le tableau
+    return blockedSquares.some(square => {
+        const topsAreEquals = characterPosition.top === square.top
+        const leftsAreEquals = characterPosition.left === square.left
+        return topsAreEquals && leftsAreEquals
+    })
+
+}
+//Déplacement des fantômes
 
 const moveRedGhost = () => {
 
@@ -313,6 +430,43 @@ const moveBlueGhost = () => {
     }, moveBlueGhostInterval)
 }
 
+// Déplacement vers PacMan
+const moveToPacMan = (ghost) => {
+    const pacManPosition = getPositionOf(pacMan)
+    const ghostPosition = getPositionOf(ghost)
+    const delta = getDelta(pacManPosition, ghostPosition)
+    let direction
+    if (delta.top === delta.left) direction = [delta.topDirection, delta.leftDirection][Math.floor(Math.random() * 2)]
+    if (delta.topDirection === null) direction = delta.leftDirection
+    else if (delta.leftDirection === null) direction = delta.topDirection
+    else direction = delta.top < delta.left ? delta.topDirection : delta.leftDirection
+    
+    if (isTheCharacterBlocked(ghostPosition, direction)) {
+        direction = direction === delta.topDirection ? delta.leftDirection : delta.topDirection
+        if (direction === null) {
+            let otherDirections = directions.filter(direction => direction !== delta.topDirection && direction !== delta.leftDirection)
+            direction = otherDirections[Math.floor(Math.random() * 2)]
+        }
+    }
+
+    while (isTheCharacterBlocked(ghostPosition, direction)) {
+        let otherDirections = directions.filter(direction => direction !== delta.topDirection && direction !== delta.leftDirection)
+        direction = otherDirections[Math.floor(Math.random() * 2)]
+    }
+    move(ghost, ghostPosition, direction)
+}
+const getDelta = (pacManPosition, ghostPosition) => {
+    const top = pacManPosition.top - ghostPosition.top
+    const left = pacManPosition.left - ghostPosition.left
+    let topDirection, leftDirection
+    if (top === 0) topDirection = null
+    else topDirection = top > 0 ? 'toBottom' : 'toTop'
+    if (left === 0) leftDirection = null
+    else leftDirection = left > 0 ? 'toRight' : 'toLeft'
+    return { top, left, topDirection, leftDirection }
+}
+
+
 const move = (character, from, to) => {
     switch(to){
         case 'toLeft':
@@ -335,62 +489,6 @@ const move = (character, from, to) => {
 }
 
 
-const moveToPacMan = (ghost) => {
-    const pacManPosition = getPositionOf(pacMan)
-    const ghostPosition = getPositionOf(ghost)
-    const delta = getDelta(pacManPosition, ghostPosition)
-    console.log('delta:', delta)
-    let direction
-    if (delta.top === delta.left) direction = [delta.topDirection, delta.leftDirection][Math.floor(Math.random() * 2)]
-    if (delta.topDirection === null) direction = delta.leftDirection
-    else if (delta.leftDirection === null) direction = delta.topDirection
-    else direction = delta.top < delta.left ? delta.topDirection : delta.leftDirection
-    
-    if (isTheCharacterBlocked(ghostPosition, direction)) {
-        direction = direction === delta.topDirection ? delta.leftDirection : delta.topDirection
-        if (direction === null) {
-            let otherDirections = directions.filter(direction => direction !== delta.topDirection && direction !== delta.leftDirection)
-            direction = otherDirections[Math.floor(Math.random() * 2)]
-        }
-        console.log('direction:', direction)
-    }
-
-    while (isTheCharacterBlocked(ghostPosition, direction)) {
-        let otherDirections = directions.filter(direction => direction !== delta.topDirection && direction !== delta.leftDirection)
-        direction = otherDirections[Math.floor(Math.random() * 2)]
-    }
-    move(ghost, ghostPosition, direction)
-}
-const getDelta = (pacManPosition, ghostPosition) => {
-    const top = pacManPosition.top - ghostPosition.top
-    const left = pacManPosition.left - ghostPosition.left
-    let topDirection, leftDirection
-    if (top === 0) topDirection = null
-    else topDirection = top > 0 ? 'toBottom' : 'toTop'
-    if (left === 0) leftDirection = null
-    else leftDirection = left > 0 ? 'toRight' : 'toLeft'
-    return { top, left, topDirection, leftDirection }
-}
-
-const displayDots = () => {
-    for (let col = 0; col < 10; col++){
-        for (let row = 0; row < 10; row++){
-            const dot = document.createElement('div')
-            dot.className = 'dot'
-            dot.style.left = col * 100 + 'px'
-            dot.style.top = row * 100 + 'px'
-            dot.dataset.top = row * 100
-            dot.dataset.left = col * 100
-            if (!dotsNotToInsert.some(dot_nti => {   //dot_nti => dot_NotToInsert
-                const mustInsert = dot.style.left === dot_nti.left && dot.style.top === dot_nti.top
-                return mustInsert
-            })){
-                map.insertBefore(dot, pacMan)
-            }
-        }
-    }
-}
-
 //principe du jeu
 const removeDot = () => {
     pacManPosition = getPositionOf(pacMan)
@@ -405,15 +503,6 @@ const removeDot = () => {
             stopGame(false)
         }
     }
-}
-
-const timer = () => {
-    setInterval(function() {
-        if (!gameOver){
-            time++
-            divTimer.textContent = time
-        }
-    }, 1000)
 }
 
 const stopGame = (lost) => {
@@ -432,7 +521,7 @@ const stopGame = (lost) => {
     if(!lost){
         gameOver = false
         gameLevel++
-        setTimeout(start(), 0)
+        setTimeout(start(), 2000)
     }
     else {
         endGameBlock.style.display = "flex"
@@ -440,18 +529,6 @@ const stopGame = (lost) => {
     //gamePage.style.display = 'none'
     //scorePage.style.display = 'flex'
 }
-
-endButton.addEventListener('click',  () => {
-    if(confirm("Souhaitez-vous enregistrer votre score?")){
-        isInsert =  insertScore()
-        if(!isInsert) alert("Erreur lors de l'insertion en base de données")
-        else alert("Votre score a été enregistré!")
-    }
-    getBestScore()
-    gamePage.style.display = 'none'
-    endGameBlock.style.display = "none"
-    scorePage.style.display = 'flex'
-})
 
 const testPositions = () => {
     pacManPosition = getPositionOf(pacMan)
@@ -467,108 +544,10 @@ const testPositions = () => {
     }
 }
 
-const start = () => {
-    //On remet les éléments à leur place
-    pacManPosition = getPositionOf(pacMan) 
-    blueGhostPosition = getPositionOf(blueGhost)
-    orangeGhostPosition = getPositionOf(orangeGhost)
-    redGhostPosition = getPositionOf(redGhost)
-    if (pacManPosition !== {top:400, left:900}){
-        pacMan.dataset.top = 400
-        pacMan.style.top = "400px"
-        pacMan.dataset.left = 900
-        pacMan.style.left = "900px"
-    }
-    if (orangeGhostPosition !== {top:300, left:400}){
-        orangeGhost.dataset.top = 300
-        orangeGhost.style.top = "300px"
-        orangeGhost.dataset.left = 400
-        orangeGhost.style.left = "400px"
-    }
-    if (redGhostPosition !== {top:300, left:400}){
-        redGhost.dataset.top = 300
-        redGhost.style.top = "300px"
-        redGhost.dataset.left = 400
-        redGhost.style.left = "400px"
-    }
-    if (blueGhostPosition !== {top:300, left:400}){
-        blueGhost.dataset.top = 300
-        blueGhost.style.top = "300px"
-        blueGhost.dataset.left = 400
-        blueGhost.style.left = "400px"
-    }
-    
-    //On remet pacMan dans la bonne disposition
-    if(pacMan.className != "toLeft") pacMan.className = "toLeft"
-    
-    dotsLeft = dotsToInsert.length
-    if(time == 0) divTimer.textContent = "0"
-    if(gameScore == 0) divScore.textContent = "0"
-    divNiveau.textContent = gameLevel
-    moveRedGhost()
-    moveOrangeGhost()
-    moveBlueGhost()
-    displayDots()
-    timer()
-}
-
-//Event quand on appuie sur le clavier
-addEventListener('keydown', e => {
-    switch (e.keyCode) {
-        case 37:
-            movePacMan('toLeft')
-            break
-        case 39:
-            movePacMan('toRight')
-            break
-        case 38:
-            movePacMan('toTop')
-            break
-        case 40:
-            movePacMan('toBottom')
-            break
-    }
-})
-
-//Pacman s'arrête quand il rencontre un mur
-const isTheCharacterBlocked = (characterPosition, movingDirection) => {
-
-    // Nous déterminons quel tableau est concerné par la direction prise
-    let blockedSquares
-
-    switch (movingDirection) {
-
-        case 'toLeft':
-            blockedSquares = blockedSquaresToLeft
-            removeDot()
-            break
-        case 'toRight':
-            blockedSquares = blockedSquaresToRight
-            removeDot()
-            break
-        case 'toTop':
-            blockedSquares = blockedSquaresToTop
-            removeDot()
-            break
-        case 'toBottom':
-            blockedSquares = blockedSquaresToBottom
-            removeDot()
-            break
-    }
-
-    // Nous retournons un booléen indiquant si la position du personnage
-    // est référencée dans le tableau
-    return blockedSquares.some(square => {
-        const topsAreEquals = characterPosition.top === square.top
-        const leftsAreEquals = characterPosition.left === square.left
-        return topsAreEquals && leftsAreEquals
-    })
-
-}
-
+/************************************************************************************************************** */
+// Requêtes AJAX avec Fetch()
 const checkUsername = async () => {    
 
-    console.log(userName)
     const response = await fetch('./index.php?function=verif_username', {
         method: 'POST', 
         headers: {"Content-Type" : "application/json; charset=UTF-8"
@@ -579,7 +558,6 @@ const checkUsername = async () => {
     const json = await response.json()
     json.exist == false? result = true : result = false
     userNameExists = json.exist
-    console.log(result)
     return result
     
 }
@@ -601,50 +579,11 @@ const insertScore = async () => {
     )
     const json = await response.json()
     json.success == true? result = true : result = false
-    console.log(result)
     return result
 }
 
 
-submit.addEventListener('click', async (e) => {
-     e.preventDefault()
-     //Vérifier que inputName.value n'est pas vide et contient au moins 3 caractères
-    //console.log(inputName.value)
-    if(inputName.value !== "" && inputName.value.length >= 2 && inputName.value.length <= 8){
-        userName = inputName.value
-        let canStart = await checkUsername()
-        console.log(canStart)
-        if(canStart == true) {      //
-            start()
-            gameLevel = 1
-            homePage.style.display = 'none'
-            gamePage.style.display = 'flex' 
-        }
-        else{
-            if(confirm("Ce pseudo existe déjà! Voulez-vous quand même continuer?")){
-                start()
-                gameLevel = 1
-                homePage.style.display = 'none'
-                gamePage.style.display = 'flex' 
-            }  
-            else {
-                inputName.value = ""
-            }
-        }
-        //Lancer la partie
-        /*console.log(verifyUsername)
-        if(verifyUsername == "disponible"){
-            start()
-            gameLevel = 1
-            homePage.style.display = 'none'
-            gamePage.style.display = 'flex' 
-        }
-        else if(verifyUsername == "non"){
-            alert("Pseudo déjà choisi")
-        } */
-        
-    }
-})
+
 const getBestScore = async () => {    
 
     const response = await fetch('./index.php?function=get_best_score', {
@@ -687,3 +626,69 @@ const getBestScore = async () => {
     scorePage.insertBefore(table, newGameButton)
 }
 
+/************************************************************************************************************** */
+// Events
+
+// Event submit du pseudo
+submit.addEventListener('click', async (e) => {
+    e.preventDefault()
+    //Vérifier que inputName.value n'est pas vide et contient au moins 3 caractères
+   if(inputName.value !== "" && inputName.value.length >= 2 && inputName.value.length <= 8){
+       userName = inputName.value
+       let canStart = await checkUsername()
+       if(canStart == true) {      //
+           start()
+           gameLevel = 1
+           homePage.style.display = 'none'
+           gamePage.style.display = 'flex' 
+       }
+       else{
+           if(confirm("Ce pseudo existe déjà! Voulez-vous quand même continuer?")){
+               start()
+               gameLevel = 1
+               homePage.style.display = 'none'
+               gamePage.style.display = 'flex' 
+           }  
+           else {
+               inputName.value = ""
+           }
+       }       
+   }
+})
+
+//Event quand on appuie sur le clavier
+
+addEventListener('keydown', e => {
+    switch (e.keyCode) {
+        case 37:
+            if(gameOver == false)
+            movePacMan('toLeft')
+            break
+        case 39:
+            if(gameOver == false)
+            movePacMan('toRight')
+            break
+        case 38:
+            if(gameOver == false)
+            movePacMan('toTop')
+            break
+        case 40:
+            if(gameOver == false)
+            movePacMan('toBottom')
+            break
+    }
+})
+
+// Event d'insertion en base de données + affichage meilleurs scores
+
+endButton.addEventListener('click',  () => {
+    if(confirm("Souhaitez-vous enregistrer votre score?")){
+        isInsert =  insertScore()
+        if(!isInsert) alert("Erreur lors de l'insertion en base de données")
+        else alert("Votre score a été enregistré!")
+    }
+    getBestScore()
+    gamePage.style.display = 'none'
+    endGameBlock.style.display = "none"
+    scorePage.style.display = 'flex'
+})
