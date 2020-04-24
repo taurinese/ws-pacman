@@ -1,17 +1,8 @@
 <?php 
-function dbConnect(){
-    try{
-    $db = new PDO('mysql:host=localhost;dbname=pacman;charset=utf8', 'root', '', array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
-    }
-    catch (Exception $exception) //$e contiendra les éventuels messages d’erreur
-    {
-        die( 'Erreur : ' . $exception->getMessage() );
-    }
 
-    return $db;
-}
 
-function verifUsername(){
+function verifUsername()
+{
     $encodedData = file_get_contents("php://input");
     $pseudo = json_decode($encodedData, true); //pour accéder au pseudo, $pseudo['username']
 
@@ -26,13 +17,14 @@ function verifUsername(){
     else {
         $exist = true;
     }
-    echo json_encode([
+    return [
         'username' => $pseudo,
         'exist' => $exist
-    ]);
+    ];
 }
 
-function insertScore(){
+function insertScore()
+{
     $canInsert = true;
     $msg_return = false;
     $encodedData = file_get_contents("php://input");
@@ -67,14 +59,15 @@ function insertScore(){
     ]);
     if($result) $msg_return = true;
     }
-    echo json_encode(['success' => $msg_return]);
+    return ['success' => $msg_return];
 }
 
-function getBestScore(){
+function getBestScore()
+{
     $db = dbConnect();
     $query = $db->query("SELECT * FROM users ORDER BY score DESC LIMIT 10 ");
     $result = $query->fetchAll();
-    echo json_encode($result);
+    return $result;
 }
 
 

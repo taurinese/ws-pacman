@@ -4,21 +4,22 @@ require'./models/datas.php';
 if(!empty($_GET)){
     switch ($_GET['function']) {
         case 'verif_username':
-            verifUsername();
+            $result = verifUsername();
             break;
         
         case 'insert_score':
-            insertScore();
+            $result = insertScore();
             break;
 
         case 'get_best_score':
-            getBestScore();
+            $result = getBestScore();
             break; 
 
         default:
             return false;
             break;
     }
+    echo json_encode($result);
 }else {
     include './views/index.php';
 }

@@ -655,9 +655,10 @@ const getBestScore = async () => {
 
      let table = document.createElement("table")
      let table_th = document.createElement("thead")
-     table_th.innerHTML = "<td>UNSERNAME</td><td>SCORE</td><td>TIMER</td><td>MAX_LVL</td>"
+     table_th.innerHTML = "<td>USERNAME</td><td>SCORE</td><td>TIMER</td><td>MAX_LVL</td>"
+     table_th.style.textAlign = "center"
      table.appendChild(table_th)
-
+     let count = 0
      json.forEach(score => {
          const table_tr = document.createElement("tr")
          const s_username = document.createElement("td")
@@ -665,10 +666,20 @@ const getBestScore = async () => {
          const s_score = document.createElement("td")
          const s_level = document.createElement("td")
 
-         s_username.innerHTML = score.username
+         if(count%2 == 0){
+            s_username.innerHTML = `<img alt="pacman score" src="assets/img/red_pacman.svg"><span class="td-first">${score.username}</span>`
+         }
+         else {
+            s_username.innerHTML = `<img alt="pacman score" src="assets/img/yellow_pacman.svg"><span class="td-first">${score.username}</span>`
+         }
+         //s_username.className = "td-first"
+         count++
          s_time.innerHTML = score.timer
+         s_time.style.textAlign = "center"
          s_score.innerHTML = score.score
+         s_score.style.textAlign = "center"
          s_level.innerHTML = score.max_lvl
+         s_level.style.textAlign = "center"
 
          table_tr.append(s_username, s_score, s_time, s_level)
          table.appendChild(table_tr)
